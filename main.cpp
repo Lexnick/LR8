@@ -20,10 +20,45 @@ struct CircularList {
     Node<InfoType> *last;
 };
 
+template<typename InfoType, unsigned int Size>
+struct DoublyLinkedLinearList {
+    Node<InfoType> Storage[Size];
+    Node<InfoType> *First;
+    Node<InfoType> *Last;
+};
+
+template<typename InfoType, unsigned int Size>
+void constructor(DoublyLinkedLinearList<InfoType, Size> &List) {
+    for (int i = 0; i < Size; i++) {
+        List.Storage[i].next = nullptr;
+        List.Storage[i].prev = nullptr;
+    }
+
+    List.First = nullptr;
+    List.Last = nullptr;
+};
+
+
 template<typename InfoType>
 void constructor(CircularList<InfoType> &List) {
+
     List.first = nullptr;
     List.last = nullptr;
+}
+
+template<typename InfoType, unsigned int Size>
+void destructor(DoublyLinkedLinearList<InfoType, Size> &List) {
+    unsigned int ListSize = size(List);
+    Node<InfoType> *Element = List.First;
+    Node<InfoType> *TempElement;
+    for (int i = 0; i < ListSize; i++) {
+        TempElement = Element->next;
+        Element->next = nullptr;
+        Element->prev = nullptr;
+        Element = TempElement;
+    }
+    List.First = nullptr;
+    List.Last = nullptr;
 }
 
 template<typename InfoType>
@@ -38,6 +73,20 @@ void destructor(CircularList<InfoType> &List) {
     List.first = nullptr;
     List.last = nullptr;
 }
+
+template<typename InfoType, unsigned int Size>
+unsigned int size(const DoublyLinkedLinearList<InfoType, Size> &List) {
+    unsigned int CountOut = 0;
+    Node<InfoType> *Element = List.First;
+    Node<InfoType> *TempElement;
+    if (Element != nullptr)
+        do {
+            Element = Element->next;
+            CountOut++;
+        } while (Element != List.First);
+    return CountOut;
+}
+
 
 template<typename InfoType>
 unsigned int size(const CircularList<InfoType> &List) {
@@ -63,6 +112,7 @@ void push_front(CircularList<InfoType> &List, InfoType Info) {
         Element->next = Element;
         Element->prev = Element;
         List.first = Element;
+        List.last = Element;
         List.first->Inf = Info;
     } else {
         Node<InfoType> *Element = new Node<InfoType>;//
@@ -79,6 +129,25 @@ void push_front(CircularList<InfoType> &List, InfoType Info) {
         }
         List.first = Element;//
     }
+}
+
+template<typename InfoType, unsigned int Size>
+void push_back(DoublyLinkedLinearList<InfoType, Size> &List, InfoType Info) {
+    unsigned int ListSize = size(List);
+    if (ListSize < Size) {
+        if (ListSize == 0) {
+            List.First = &List.Storage[ListSize];
+            List.First->Inf = Info;
+            List.First->prev = List.First;
+            List.First->next = List.First;
+        } else {
+            List.Storage[ListSize].Inf = Info;
+            List.First->prev->next = &List.Storage[ListSize];
+            List.Storage[ListSize].prev = List.First->prev;
+            List.Storage[ListSize].next = List.First;
+            List.First->prev = &List.Storage[ListSize];
+        }
+    } else std::cout << "There is no free space to push" << std::endl;
 }
 
 template<typename InfoType>
@@ -99,6 +168,32 @@ void push_back(CircularList<InfoType> &List, InfoType Info) {
         }
         List.last = Element;//
     }
+}
+
+template<typename InfoType, unsigned int Size>
+void push(DoublyLinkedLinearList<InfoType, Size> &List, unsigned int Index, InfoType Info) {
+    unsigned int ListSize = size(List);
+    if ((Index >= 0) && (Index <= ListSize)) {
+        if (ListSize < Size) {
+            if (Index == ListSize)
+                push_back(List, Info);
+            else {
+                InfoType Data = List.Storage[Index].Inf;
+                InfoType TempData = Data;
+                for (int i = Index; i < ListSize; i++) {
+                    TempData = List.Storage[i].Inf;
+                    List.Storage[i].Inf = Data;
+                    Data = TempData;
+                }
+                List.Storage[Index].Inf = Info;
+                List.Storage[ListSize].Inf = Data;
+                List.Storage[ListSize].prev = &List.Storage[ListSize - 1];
+                List.Storage[ListSize].next = List.First;
+                List.Storage[ListSize - 1].next = &List.Storage[ListSize];
+                List.First->prev = &List.Storage[ListSize];
+            }
+        } else std::cout << "There is no free space to push" << std::endl;
+    } else std::cout << "Invalid index" << std::endl;
 }
 
 template<typename InfoType>
@@ -144,6 +239,28 @@ void push(CircularList<InfoType> &List, Node<InfoType> *&iter, InfoType Info) {
     }
 }
 
+template<typename InfoType, unsigned int Size>
+InfoType pop_front(DoublyLinkedLinearList<InfoType, Size> &List) {
+    InfoType InfoOut = List.First->Inf;
+    unsigned int ListSize = size(List);
+    if (ListSize == 1) {
+        destructor(List);
+        return InfoOut;
+    } else {
+        InfoType Data = List.Storage[ListSize - 1].Inf;
+        InfoType TempData = Data;
+        for (int i = ListSize - 1; i > -1; i--) {
+            TempData = List.Storage[i].Inf;
+            List.Storage[i].Inf = Data;
+            Data = TempData;
+        }
+        List.Storage[ListSize - 2].next = List.First;
+        List.Storage[ListSize - 1].next = nullptr;
+        List.Storage[ListSize - 1].prev = nullptr;
+        return InfoOut;
+    }
+}
+
 template<typename InfoType>
 InfoType pop_front(CircularList<InfoType> &List) {
     InfoType Out;
@@ -161,6 +278,23 @@ InfoType pop_front(CircularList<InfoType> &List) {
         List.last->next = List.first;
         delete ElementTemp;
         return Out;
+    }
+}
+
+template<typename InfoType, unsigned int Size>
+InfoType pop_back(DoublyLinkedLinearList<InfoType, Size> &List) {
+    unsigned int ListSize = size(List);
+    if (ListSize == 1) {
+        InfoType InfoOut = List.First->Inf;
+        destructor(List);
+        return InfoOut;
+    } else {
+        InfoType InfoOut = List.Storage[ListSize - 1].Inf;
+        List.Storage[ListSize - 2].next = List.First;
+        List.First->prev = &List.Storage[ListSize - 2];
+        List.Storage[ListSize - 1].prev = nullptr;
+        List.Storage[ListSize - 1].next = nullptr;
+        return InfoOut;
     }
 }
 
@@ -182,6 +316,31 @@ InfoType pop_back(CircularList<InfoType> &List) {
         delete ElementTemp;
         return Out;
     }
+}
+
+template<typename InfoType, unsigned int Size>
+InfoType pop(DoublyLinkedLinearList<InfoType, Size> &List, unsigned int Index) {
+    unsigned int ListSize = size(List);
+    if ((Index >= 0) && (Index < ListSize)) {
+        if (Index == 0)
+            return pop_front(List);
+        else if (Index == ListSize - 1)
+            return pop_back(List);
+        else {
+            InfoType InfoOut = List.Storage[Index].Inf;
+            InfoType Data = List.Storage[ListSize - 1].Inf;
+            InfoType TempData = Data;
+            for (int i = ListSize - 1; i > Index - 1; i--) {
+                TempData = List.Storage[i].Inf;
+                List.Storage[i].Inf = Data;
+                Data = TempData;
+            }
+            List.Storage[ListSize - 2].next = List.First;
+            List.Storage[ListSize - 1].next = nullptr;
+            List.Storage[ListSize - 1].prev = nullptr;
+            return InfoOut;
+        }
+    } else std::cout << "Invalid index" << std::endl;
 }
 
 template<typename InfoType>
@@ -225,6 +384,11 @@ InfoType pop(CircularList<InfoType> &List, Node<InfoType> *&iter) {
     }
 }
 
+template<typename InfoType, unsigned int Size>
+InfoType get(DoublyLinkedLinearList<InfoType, Size> &List, unsigned int Index) {
+    return List.Storage[Index].Inf;
+}
+
 template<typename InfoType>
 InfoType get(CircularList<InfoType> &List, int Index) {
     InfoType Out;
@@ -238,6 +402,14 @@ InfoType get(CircularList<InfoType> &List, int Index) {
     return Out;
 }
 
+template<typename InfoType, unsigned int Size>
+int find(DoublyLinkedLinearList<InfoType, Size> &List, InfoType Value) {
+    unsigned int ListSize=size(List);
+    for (int i=0; i<ListSize; i++)
+        if (List.Storage[i].Inf==Value)
+            return i;
+}
+
 template<typename InfoType>
 int find(CircularList<InfoType> &List, InfoType Info) {
     int IndexTemp = 0;
@@ -249,6 +421,17 @@ int find(CircularList<InfoType> &List, InfoType Info) {
     if (IndexTemp == size(List))
         return -1;
     else return IndexTemp;
+}
+
+template<typename InfoType, unsigned int Size>
+void print(DoublyLinkedLinearList<InfoType, Size> &List) {
+    unsigned int ListSize = size(List);
+    if (ListSize == 0)
+        std::cout << "Empty" << std::endl;
+    else
+        for (int i = 0; i < ListSize; i++)
+            std::cout << List.Storage[i].Inf << "; ";
+    std::cout << std::endl;
 }
 
 template<typename InfoType>
@@ -281,270 +464,48 @@ bool operator!=(const Student &S1, const Student &S2) {
     return !(S1 == S2);
 }
 
-template<typename InfoType, unsigned int Size>
-struct DoublyLinkedLinearList {
-    Node<InfoType> Storage[Size];
-    Node<InfoType> *First;
-    Node<InfoType> *Last;
-};
-
-template<typename InfoType, unsigned int Size>
-void constructor(DoublyLinkedLinearList<InfoType, Size> &List) {
-    for (int i = 0; i < Size; i++) {
-        List.Storage[i].next = nullptr;
-        List.Storage[i].prev = nullptr;
-    }
-    List.First = nullptr;
-    List.Last = nullptr;
-}
-
-template<typename InfoType, unsigned int Size>
-void destructor(DoublyLinkedLinearList<InfoType, Size> &List) {
-    for (int i = 0; i < Size; i++) {
-        List.Storage[i].next = nullptr;
-        List.Storage[i].prev = nullptr;
-    }
-    List.First = nullptr;
-    List.Last = nullptr;
-}
-
-template<typename InfoType, unsigned int Size>
-unsigned int size(const DoublyLinkedLinearList<InfoType, Size> &List) {
-    unsigned int CountOut = 0;
-    if ((List.First == nullptr) && (List.Last == nullptr))
-        return CountOut;
-    else if ((List.First != nullptr) && (List.Last == nullptr)) {
-        CountOut++;
-        return CountOut;
-    } else {
-        Node<InfoType> *Element = List.First;
-        while (Element != List.Last) {
-            CountOut++;
-            Element = Element->next;
-        }
-        CountOut++;
-        return CountOut;
-    }
-}
-
-template<typename InfoType, unsigned int Size>
-int FreeAddress(const DoublyLinkedLinearList<InfoType, Size> &List) {
-    int Count = 0;
-    for (int i = 0; i < Size; i++) {
-        if ((List.Storage[i].next == nullptr) && (List.Storage[i].prev == nullptr))
-            if (&List.Storage[i] == List.First)
-                continue;
-            else return i;
-        Count++;
-    }
-    return -1;
-
-}
-
-template<typename InfoType, unsigned int Size>
-void push_back(DoublyLinkedLinearList<InfoType, Size> &List, InfoType Info) {
-    unsigned int ListSize = size(List);
-    int a = FreeAddress(List);
-    if (a != -1) {
-        if (ListSize == 0) {
-            List.Storage[a].Inf = Info;
-            List.First = &List.Storage[a];
-        } else if (ListSize == 1) {
-
-            List.Storage[a].Inf = Info;
-            List.Last = &List.Storage[a];
-            List.First->next = List.Last;
-            List.Last->prev = List.First;
-        } else {
-
-            List.Storage[a].Inf = Info;
-            List.Last->next = &List.Storage[a];
-            List.Last->next->prev = List.Last;
-            List.Last = &List.Storage[a];
-        }
-    } else std::cout << "There is no free space to push" << std::endl;
-}
-
-template<typename InfoType, unsigned int Size>
-void push(DoublyLinkedLinearList<InfoType, Size> &List, unsigned int Index, InfoType Info) {
-    unsigned int ListSize = size(List);
-    if (Index > ListSize)
-        std::cout << "Invalid index" << std::endl;
-    else if (Index == ListSize)
-        push_back(List, Info);
-    else {
-        int a = FreeAddress(List);
-        if (a != -1) {
-            if (ListSize == 0) {
-                List.Storage[a].Inf = Info;
-                List.First = &List.Storage[a];
-            }
-            if (ListSize == 1) {
-                List.Storage[a].Inf = Info;
-                List.First->prev = &List.Storage[a];
-                List.First->prev->next = List.First;
-                List.Last = List.First;
-                List.First = &List.Storage[a];
-            } else {
-                unsigned int IndexTemp = 0;
-                Node<InfoType> *Element = List.First;
-                while (IndexTemp != Index) {
-                    if (Element != List.Last)
-                        Element = Element->next;
-                    IndexTemp++;
-                }
-                if (Element == List.First) {
-                    List.Storage[a].Inf = Info;
-                    List.First->prev = &List.Storage[a];
-                    List.First->prev->next = List.First;
-                    List.First = List.First->prev;
-                } else {
-                    List.Storage[a].Inf = Info;
-                    Element->prev->next = &List.Storage[a];
-                    Element->prev->next->prev = Element->prev;
-                    Element->prev = Element->prev->next;
-                    Element->prev->next = Element;
-                }
-            }
-        } else
-            std::cout << "There is no free space to push" <<
-                      std::endl;
-    }
-}
-
-template<typename InfoType, unsigned int Size>
-InfoType pop_front(DoublyLinkedLinearList<InfoType, Size> &List) {
-    InfoType InfoOut = List.First->Inf;
-    unsigned int ListSize = size(List);
-    if (ListSize == 1) {
-        InfoOut = List.First->Inf;
-        destructor(List);
-        return InfoOut;
-    } else if (ListSize == 2) {
-        InfoOut = List.First->Inf;
-        List.First = List.First->next;
-
-        List.First->prev->next = nullptr;
-        List.First->prev = nullptr;
-        List.Last = nullptr;
-        return InfoOut;
-    } else {
-        List.First = List.First->next;
-
-        List.First->prev->next = nullptr;
-        List.First->prev = nullptr;
-        return InfoOut;
-    }
-}
-
-template<typename InfoType, unsigned int Size>
-InfoType pop_back(DoublyLinkedLinearList<InfoType, Size> &List) {
-
-    unsigned int ListSize = size(List);
-    if (ListSize == 1) {
-        return pop_front(List);
-    } else if (ListSize == 2) {
-        InfoType InfoOut = List.Last->Inf;
-        InfoOut = List.Last->Inf;
-        List.Last = List.Last->prev;
-
-        List.Last->next->prev = nullptr;
-        List.Last->next = nullptr;
-        List.First = List.Last;
-        List.Last = nullptr;
-        return InfoOut;
-    } else {
-        InfoType InfoOut = List.Last->Inf;
-        List.Last = List.Last->prev;
-
-        List.Last->next->prev = nullptr;
-        List.Last->next = nullptr;
-        return InfoOut;
-    }
-}
-
-template<typename InfoType, unsigned int Size>
-InfoType pop(DoublyLinkedLinearList<InfoType, Size> &List, unsigned int Index) {
-    if (Index == 0)
-        return pop_front(List);
-    else if (Index == size(List) - 1)
-        return pop_back(List);
-    else {
-        unsigned int IndexTemp = 0;
-        Node<InfoType> *Element = List.First;
-        while (IndexTemp != Index) {
-            Element = Element->next;
-            IndexTemp++;
-        }
-        InfoType InfoOut = Element->Inf;
-        Element->prev->next = Element->next;
-        Element->next->prev = Element->prev;
-        Element->next = nullptr;
-        Element->prev = nullptr;
-
-        return InfoOut;
-    }
-}
-
-template<typename InfoType, unsigned int Size>
-InfoType get(DoublyLinkedLinearList<InfoType, Size> &List, unsigned int Index) {
-    Node<InfoType> *Element = List.First;
-    unsigned int IndexTemp = 0;
-    while (IndexTemp != Index) {
-        Element = Element->next;
-        IndexTemp++;
-    }
-    return Element->Inf;
-}
-
-template<typename InfoType, unsigned int Size>
-int find(DoublyLinkedLinearList<InfoType, Size> &List, InfoType Value) {
-    int IndexTemp = 0;
-    Node<InfoType> *Element = List.First;
-    while ((Element->Inf != Value) && (IndexTemp < size(List))) {
-        Element = Element->next;
-        IndexTemp++;
-    }
-    if (IndexTemp == size(List))
-        return -1;
-    else return IndexTemp;
-}
-
-template<typename InfoType, unsigned int Size>
-void print(DoublyLinkedLinearList<InfoType, Size> &List) {
-    if ((List.First == nullptr) && (List.Last == nullptr))
-        std::cout << "Empty" << std::endl;
-    else if ((List.First != nullptr) && (List.Last == nullptr))
-        std::cout << List.First->Inf << std::endl;
-    else {
-        Node<InfoType> *Element = List.First;
-        while (Element != List.Last) {
-            std::cout << Element->Inf << "; ";
-            Element = Element->next;
-        }
-        std::cout << List.Last->Inf << std::endl;
-    }
-}
 
 int main() {
-    CircularList<int> AfterTest;
-    constructor(AfterTest);
-    for (int i = 0; i < 5; i++)
-        push_front(AfterTest, i);
-    for (int i = 0; i < 5; i++)
-        std::cout << pop_front(AfterTest) << std::endl;
-    DoublyLinkedLinearList<int, 3> Test;
+    DoublyLinkedLinearList<int, 8> Test;
     constructor(Test);
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
     print(Test);
-    push_back(Test, 100);
+    for (int i = 0; i < 5; i++) {
+        push_back(Test, i);
+        std::cout << "Size = " << size(Test) << std::endl;
+        std::cout << "List: ";
+        print(Test);
+    }
+    push(Test, 2, 777);
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
     print(Test);
-    push(Test, 0, 200);
+    push(Test, 0, 666);
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
     print(Test);
-    push(Test, 2, 300);
+    push(Test, 6, 888);
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
     print(Test);
-    std::cout << pop(Test, 1) << ' ' << find(Test, 200) << ' ' << pop_front(Test) << ' ' << pop_back(Test) << std::endl;
+    std::cout << pop_front(Test) << std::endl;
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
     print(Test);
+    std::cout << pop_back(Test) << std::endl;
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
+    print(Test);
+    std::cout << pop(Test, 2) << std::endl;
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
+    print(Test);
+    std::cout<<get(Test,4)<<std::endl;
+    std::cout<<find(Test, 2)<<std::endl;
     destructor(Test);
+    std::cout << "Size = " << size(Test) << std::endl;
+    std::cout << "List: ";
     print(Test);
 
     DoublyLinkedLinearList<Student, 4> Class;
@@ -561,6 +522,13 @@ int main() {
     std::cout << find(Class, Tanya) << std::endl;
     std::cout << get(Class, 1) << std::endl;
     destructor(Class);
+
+    CircularList<int> AfterTest;
+    constructor(AfterTest);
+    for (int i = 0; i < 5; i++)
+        push_front(AfterTest, i);
+    for (int i = 0; i < 5; i++)
+        std::cout << pop_front(AfterTest) << std::endl;
     CircularList<int> Test1;
     constructor(Test1);
     std::cout << "Circular List \"Test1\" was initialized" << std::endl;
@@ -722,22 +690,22 @@ int main() {
     constructor(MyGroup);
     std::cout << "\"Student\" type List \"MyGroup\" :";
     print(MyGroup);
-    std::cout << "Pushing \"Vasya\" into MyGroup" << std::endl;
+    std::cout << "Pushing \"Vasya\" into MyGroup at the beginning" << std::endl;
     push_front(MyGroup, Vasya);
     print(MyGroup);
-    std::cout << "Pushing \"Tanya\" into MyGroup" << std::endl;
+    std::cout << "Pushing \"Tanya\" into MyGroup at the end" << std::endl;
     push_back(MyGroup, Tanya);
     print(MyGroup);
-    std::cout << "Pushing \"Misha\" into MyGroup" << std::endl;
+    std::cout << "Pushing \"Misha\" into MyGroup using the index 1" << std::endl;
     push(MyGroup, 1, Misha);
     print(MyGroup);
-    std::cout << "Pushing \"Petya\" into MyGroup" << std::endl;
+    std::cout << "Pushing \"Petya\" into MyGroup using the iterator on the first element" << std::endl;
     push(MyGroup, MyGroup.first, Petya);
     print(MyGroup);
     std::cout << "Poping element 2: " << pop(MyGroup, 2) << std::endl;
     print(MyGroup);
     std::cout << "Finding Petya's index: " << find(MyGroup, Petya) << std::endl;
+    std::cout << "Destruction MyGroup" << std::endl;
     destructor(MyGroup);
-
     return 0;
 }
